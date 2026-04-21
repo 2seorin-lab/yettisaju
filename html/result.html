@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>명림당 — 사주 리딩</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: "Noto Serif KR", "Apple SD Gothic Neo", serif;
+      background: #0d0c12; color: #f3e9d2; min-height: 100%;
+    }
+    body {
+      background:
+        radial-gradient(circle at top, rgba(166,124,82,.12), transparent 28%),
+        radial-gradient(circle at bottom, rgba(217,178,111,.08), transparent 30%),
+        linear-gradient(180deg, #16131c 0%, #0c0a10 100%);
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -2;
+      background-image:
+        radial-gradient(circle at 16% 12%, rgba(235,205,157,.16), transparent 14%),
+        radial-gradient(circle at 82% 18%, rgba(216,178,112,.12), transparent 18%),
+        radial-gradient(circle at 50% 72%, rgba(243,233,210,.06), transparent 22%);
+    }
+
+    /* ── 로딩 ── */
+    #loading {
+      position: fixed; inset: 0; z-index: 50;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 28px; background: #0d0c12; transition: opacity .6s ease;
+    }
+    #loading.fade-out { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 2px solid rgba(232,184,108,.2);
+      border-top-color: #e8c78f; border-radius: 50%;
+      animation: spin 1.2s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loadingMain {
+      font-size: 17px; color: rgba(243,233,210,.8);
+      letter-spacing: .04em; transition: opacity .25s; text-align: center;
+    }
+    #loadingSub { font-size: 13px; color: rgba(243,233,210,.38); margin-top: 6px; text-align: center; }
+
+    /* ── 결과 ── */
+    #result { display: none; opacity: 0; transition: opacity .7s ease; }
+    #result.show    { display: block; }
+    #result.visible { opacity: 1; }
+
+    /* ── 헤더 ── */
+    .page-header { text-align: center; padding: 56px 20px 0; }
+    .brand-small {
+      display: inline-block; margin-bottom: 20px;
+      padding: 6px 14px; border: 1px solid rgba(230,198,138,.22);
+      border-radius: 999px; color: #d8bf8b; font-size: 13px; letter-spacing: .18em;
+    }
+    .page-title { font-size: clamp(26px,5vw,38px); font-weight: 600; margin: 0 0 10px; }
+    .page-sub   { font-size: 13px; color: rgba(243,233,210,.45); letter-spacing: .05em; }
+
+    /* ── 사주 팔자 ── */
+    .pillars-section { padding: 44px 20px 0; }
+    .pillars-wrap {
+      max-width: 680px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    .pillar-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(230,198,138,.15);
+      border-radius: 16px; padding: 18px 10px; text-align: center;
+    }
+    .pillar-day { border-color: rgba(232,184,108,.38); background: rgba(232,184,108,.04); }
+    .pillar-label  { font-size: 11px; letter-spacing: .15em; color: #b79a6b; margin-bottom: 12px; display: block; }
+    .pillar-stem   { font-size: 30px; font-weight: 700; display: block; line-height: 1; margin-bottom: 5px; }
+    .pillar-branch { font-size: 26px; display: block; line-height: 1; margin-bottom: 10px; color: rgba(243,233,210,.82); }
+    .pillar-elem   { font-size: 11px; padding: 3px 8px; border-radius: 999px; display: inline-block; }
+    .e-Wood  { color: #7ac46e; border: 1px solid rgba(122,196,110,.3); background: rgba(122,196,110,.06); }
+    .e-Fire  { color: #e07878; border: 1px solid rgba(224,120,120,.3); background: rgba(224,120,120,.06); }
+    .e-Earth { color: #c8a14e; border: 1px solid rgba(200,161,78,.3);  background: rgba(200,161,78,.06); }
+    .e-Metal { color: #a0c0d8; border: 1px solid rgba(160,192,216,.3); background: rgba(160,192,216,.06); }
+    .e-Water { color: #6090d0; border: 1px solid rgba(96,144,208,.3);  background: rgba(96,144,208,.06); }
+
+    /* ── 인트로 ── */
+    .intro-section { max-width: 680px; margin: 40px auto 0; padding: 0 20px; }
+    .intro-box {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(230,198,138,.14);
+      border-radius: 20px; padding: 32px 32px 32px 44px;
+      font-size: 16px; line-height: 2.1; color: rgba(243,233,210,.88);
+      position: relative;
+    }
+    .intro-box::before {
+      content: '"'; position: absolute; top: 10px; left: 18px;
+      font-size: 52px; color: rgba(232,184,108,.22); line-height: 1;
+      font-family: Georgia, serif; pointer-events: none;
+    }
+
+    /* ── 섹션 아코디언 ── */
+    .sections-wrap { max-width: 680px; margin: 32px auto 0; padding: 0 20px; }
+    .section-card {
+      margin-bottom: 10px;
+      border: 1px solid rgba(230,198,138,.13); border-radius: 18px;
+      overflow: hidden; background: rgba(255,255,255,.025);
+      opacity: 0; transform: translateY(14px);
+      transition: opacity .5s ease, transform .5s ease, border-color .2s;
+    }
+    .section-card.appear { opacity: 1; transform: translateY(0); }
+    .section-card:hover { border-color: rgba(230,198,138,.22); }
+    .section-header {
+      padding: 22px 24px; cursor: pointer;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      transition: background .2s; user-select: none;
+    }
+    .section-header:hover { background: rgba(255,255,255,.02); }
+    .section-meta { flex: 1; }
+    .section-title   { font-size: 16px; font-weight: 600; margin: 0 0 6px; color: #f3e9d2; }
+    .section-summary { font-size: 13px; color: rgba(243,233,210,.5); line-height: 1.6; margin: 0; }
+    .toggle-btn {
+      flex-shrink: 0; width: 26px; height: 26px;
+      border: 1px solid rgba(230,198,138,.2); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #d8bf8b; font-size: 16px; line-height: 1;
+      transition: transform .25s, background .2s; margin-top: 2px;
+    }
+    .section-card.open .toggle-btn { transform: rotate(45deg); background: rgba(232,184,108,.1); }
+    .section-body {
+      max-height: 0; overflow: hidden;
+      transition: max-height .45s cubic-bezier(.4,0,.2,1), padding .3s ease;
+      padding: 0 24px;
+    }
+    .section-card.open .section-body { max-height: 900px; padding: 0 24px 26px; }
+    .section-divider { border: none; border-top: 1px solid rgba(230,198,138,.1); margin: 0 0 20px; }
+    .section-content { font-size: 15px; line-height: 2.1; color: rgba(243,233,210,.82); white-space: pre-line; }
+
+    /* ── 하단 버튼 ── */
+    .footer-wrap { max-width: 680px; margin: 36px auto 80px; padding: 0 20px; text-align: center; }
+    .retry-link {
+      display: inline-block; padding: 13px 28px;
+      border: 1px solid rgba(230,198,138,.22); border-radius: 999px;
+      color: rgba(243,233,210,.65); text-decoration: none; font-size: 14px;
+      transition: all .2s; letter-spacing: .05em;
+    }
+    .retry-link:hover { border-color: rgba(232,184,108,.45); color: #f3e9d2; }
+
+    /* ── 에러 ── */
+    #errorBox { display: none; max-width: 520px; margin: 80px auto; padding: 0 20px; text-align: center; }
+    .err-title { font-size: 22px; margin-bottom: 14px; }
+    .err-msg   { font-size: 15px; color: rgba(243,233,210,.55); line-height: 1.8; }
+    .err-link  {
+      display: inline-block; margin-top: 28px; padding: 13px 28px;
+      background: linear-gradient(180deg, #e8c78f 0%, #cda161 100%);
+      color: #1a110a; border-radius: 12px; text-decoration: none;
+      font-weight: 700; font-size: 15px;
+    }
+
+    @media (max-width: 520px) {
+      .pillars-wrap { grid-template-columns: repeat(2, 1fr); }
+      .intro-box { padding: 28px 22px 28px 34px; font-size: 15px; }
+      .section-header { padding: 18px 18px; }
+      .section-body, .section-card.open .section-body { padding-left: 18px; padding-right: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 로딩 -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>
+      <div id="loadingMain">사주 팔자를 계산하고 있어요...</div>
+      <div id="loadingSub">잠시만 기다려 주세요</div>
+    </div>
+  </div>
+
+  <!-- 결과 -->
+  <div id="result">
+    <div class="page-header">
+      <div class="brand-small">명림당</div>
+      <h1 class="page-title" id="pageTitle">사주 리딩</h1>
+      <p class="page-sub" id="pageSub"></p>
+    </div>
+    <div class="pillars-section">
+      <div class="pillars-wrap" id="pillarsWrap"></div>
+    </div>
+    <div class="intro-section">
+      <div class="intro-box" id="introBox"></div>
+    </div>
+    <div class="sections-wrap" id="sectionsWrap"></div>
+    <div class="footer-wrap">
+      <a href="/input" class="retry-link">다른 사주 보기</a>
+    </div>
+  </div>
+
+  <!-- 에러 -->
+  <div id="errorBox">
+    <div class="err-title">앗, 문제가 생겼구나</div>
+    <p class="err-msg" id="errMsg"></p>
+    <a href="/input" class="err-link">다시 시도하기</a>
+  </div>
+
+  <script>
+    const ELEM_MAP = { '木':'e-Wood','火':'e-Fire','土':'e-Earth','金':'e-Metal','水':'e-Water' };
+
+    const MSGS = [
+      '사주 팔자를 계산하고 있어요...',
+      '천간과 지지를 살피고 있어요...',
+      '오행의 기운을 읽고 있어요...',
+      '운명의 실을 풀어내고 있어요...',
+      '조금만 더 기다려 주세요...',
+    ];
+    let msgIdx = 0;
+    const msgTimer = setInterval(() => {
+      const el = document.getElementById('loadingMain');
+      if (!el) return;
+      el.style.opacity = '0';
+      setTimeout(() => {
+        msgIdx = (msgIdx + 1) % MSGS.length;
+        el.textContent = MSGS[msgIdx];
+        el.style.opacity = '1';
+      }, 260);
+    }, 3600);
+
+    function renderPillars(data, form) {
+      const wrap = document.getElementById('pillarsWrap');
+      wrap.innerHTML = '';
+      [
+        { key: 'year',  label: '년주' },
+        { key: 'month', label: '월주' },
+        { key: 'day',   label: '일주', day: true },
+        { key: 'hour',  label: form.hourUnknown ? '시주*' : '시주' },
+      ].forEach(({ key, label, day }) => {
+        const p = data[key];
+        const card = document.createElement('div');
+        card.className = 'pillar-card' + (day ? ' pillar-day' : '');
+        card.innerHTML =
+          `<span class="pillar-label">${label}</span>` +
+          `<span class="pillar-stem">${p.stem}</span>` +
+          `<span class="pillar-branch">${p.branch}</span>` +
+          `<span class="pillar-elem ${ELEM_MAP[p.stemElem] || ''}">${p.stemElem}/${p.branchElem}</span>`;
+        wrap.appendChild(card);
+      });
+
+      document.getElementById('pageSub').textContent =
+        `${form.year}년 ${form.month}월 ${form.day}일` +
+        (form.hourUnknown ? '' : ` ${form.hour}시`) +
+        ` · ${form.gender === 'male' ? '남성' : '여성'}`;
+    }
+
+    function renderSections(sections) {
+      const wrap = document.getElementById('sectionsWrap');
+      wrap.innerHTML = '';
+      sections.forEach((s, i) => {
+        const card = document.createElement('div');
+        card.className = 'section-card';
+        card.innerHTML =
+          `<div class="section-header" onclick="toggleCard(this.parentElement)">` +
+            `<div class="section-meta">` +
+              `<p class="section-title">${s.title}</p>` +
+              `<p class="section-summary">${s.summary}</p>` +
+            `</div>` +
+            `<div class="toggle-btn">+</div>` +
+          `</div>` +
+          `<div class="section-body">` +
+            `<hr class="section-divider"/>` +
+            `<div class="section-content">${s.content}</div>` +
+          `</div>`;
+        wrap.appendChild(card);
+        setTimeout(() => card.classList.add('appear'), 120 + i * 90);
+      });
+    }
+
+    function toggleCard(card) { card.classList.toggle('open'); }
+
+    function showResult() {
+      clearInterval(msgTimer);
+      const loading = document.getElementById('loading');
+      loading.classList.add('fade-out');
+      setTimeout(() => { loading.style.display = 'none'; }, 650);
+      const result = document.getElementById('result');
+      result.classList.add('show');
+      requestAnimationFrame(() => requestAnimationFrame(() => result.classList.add('visible')));
+    }
+
+    function showError(msg) {
+      clearInterval(msgTimer);
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('errMsg').textContent = msg;
+      document.getElementById('errorBox').style.display = 'block';
+    }
+
+    function cleanJSON(text) {
+      let t = text.trim();
+      const m = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (m) return m[1].trim();
+      if (t.startsWith('```')) t = t.slice(t.indexOf('\n') + 1);
+      if (t.endsWith('```'))   t = t.slice(0, t.lastIndexOf('```'));
+      return t.trim();
+    }
+
+    async function fetchReading(form) {
+      let res;
+      try {
+        res = await fetch('/api/saju', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+      } catch {
+        return showError('서버에 연결할 수 없어요. 서버가 실행 중인지 확인해주세요.');
+      }
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        return showError(err.error || `서버 오류 (${res.status})`);
+      }
+
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '', fullText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          let ev;
+          try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+
+          if (ev.type === 'saju') {
+            document.getElementById('pageTitle').textContent = form.name + '님의 사주';
+            renderPillars(ev.data, form);
+            document.getElementById('loadingMain').textContent = '운세를 풀어내고 있어요...';
+          } else if (ev.type === 'text') {
+            fullText += ev.text;
+          } else if (ev.type === 'done') {
+            try {
+              const data = JSON.parse(cleanJSON(fullText));
+              document.getElementById('introBox').textContent = data.intro;
+              renderSections(data.sections);
+            } catch {
+              document.getElementById('introBox').textContent = fullText;
+            }
+            showResult();
+          } else if (ev.type === 'error') {
+            showError(ev.message);
+          }
+        }
+      }
+    }
+
+    const raw = sessionStorage.getItem('sajuForm');
+    if (!raw) {
+      window.location.href = '/input';
+    } else {
+      fetchReading(JSON.parse(raw));
+    }
+  </script>
+</body>
+</html>
