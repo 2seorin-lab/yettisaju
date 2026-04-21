@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>명림당 — 사주 리딩</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      font-family: "Noto Serif KR", "Apple SD Gothic Neo", serif;
+      background: #0d0c12; color: #f3e9d2; min-height: 100%;
+    }
+    body {
+      background:
+        radial-gradient(circle at top, rgba(166,124,82,.12), transparent 28%),
+        radial-gradient(circle at bottom, rgba(217,178,111,.08), transparent 30%),
+        linear-gradient(180deg, #16131c 0%, #0c0a10 100%);
+    }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -2;
+      background-image:
+        radial-gradient(circle at 16% 12%, rgba(235,205,157,.16), transparent 14%),
+        radial-gradient(circle at 82% 18%, rgba(216,178,112,.12), transparent 18%),
+        radial-gradient(circle at 50% 72%, rgba(243,233,210,.06), transparent 22%);
+    }
+
+    /* ── 로딩 ── */
+    #loading {
+      position: fixed; inset: 0; z-index: 50;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 28px; background: #0d0c12; transition: opacity .6s ease;
+    }
+    #loading.fade-out { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 2px solid rgba(232,184,108,.2);
+      border-top-color: #e8c78f; border-radius: 50%;
+      animation: spin 1.2s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-msg { font-size: 16px; color: rgba(243,233,210,.7); }
+
+    /* ── 결과 ── */
+    #result { display: none; opacity: 0; transition: opacity .7s ease; }
+    #result.show    { display: block; }
+    #result.visible { opacity: 1; }
+
+    /* ── 헤더 ── */
+    .page-header { text-align: center; padding: 56px 20px 0; }
+    .brand-small {
+      display: inline-block; margin-bottom: 20px;
+      padding: 6px 14px; border: 1px solid rgba(230,198,138,.22);
+      border-radius: 999px; color: #d8bf8b; font-size: 13px; letter-spacing: .18em;
+    }
+    .page-title { font-size: clamp(26px,5vw,38px); font-weight: 600; margin: 0 0 10px; }
+    .page-sub   { font-size: 13px; color: rgba(243,233,210,.45); letter-spacing: .05em; }
+
+    /* ── 사주 팔자 ── */
+    .pillars-section { padding: 44px 20px 0; }
+    .pillars-wrap {
+      max-width: 680px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    .pillar-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(230,198,138,.15);
+      border-radius: 16px; padding: 18px 10px; text-align: center;
+    }
+    .pillar-day { border-color: rgba(232,184,108,.38); background: rgba(232,184,108,.04); }
+    .pillar-label  { font-size: 11px; letter-spacing: .15em; color: #b79a6b; margin-bottom: 12px; display: block; }
+    .pillar-stem   { font-size: 30px; font-weight: 700; display: block; line-height: 1; margin-bottom: 5px; }
+    .pillar-branch { font-size: 26px; display: block; line-height: 1; margin-bottom: 10px; color: rgba(243,233,210,.82); }
+    .pillar-elem   { font-size: 11px; padding: 3px 8px; border-radius: 999px; display: inline-block; }
+    .e-Wood  { color: #7ac46e; border: 1px solid rgba(122,196,110,.3); background: rgba(122,196,110,.06); }
+    .e-Fire  { color: #e07878; border: 1px solid rgba(224,120,120,.3); background: rgba(224,120,120,.06); }
+    .e-Earth { color: #c8a14e; border: 1px solid rgba(200,161,78,.3);  background: rgba(200,161,78,.06); }
+    .e-Metal { color: #a0c0d8; border: 1px solid rgba(160,192,216,.3); background: rgba(160,192,216,.06); }
+    .e-Water { color: #6090d0; border: 1px solid rgba(96,144,208,.3);  background: rgba(96,144,208,.06); }
+
+    /* ── 인트로 ── */
+    .intro-section { max-width: 680px; margin: 40px auto 0; padding: 0 20px; }
+    .intro-box {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(230,198,138,.14);
+      border-radius: 20px; padding: 32px 32px 32px 44px;
+      font-size: 16px; line-height: 2.1; color: rgba(243,233,210,.88);
+      position: relative;
+    }
+    .intro-box::before {
+      content: '"'; position: absolute; top: 10px; left: 18px;
+      font-size: 52px; color: rgba(232,184,108,.22); line-height: 1;
+      font-family: Georgia, serif; pointer-events: none;
+    }
+
+    /* ── 섹션 아코디언 ── */
+    .sections-wrap { max-width: 680px; margin: 32px auto 0; padding: 0 20px; }
+    .section-card {
+      margin-bottom: 10px;
+      border: 1px solid rgba(230,198,138,.13); border-radius: 18px;
+      overflow: hidden; background: rgba(255,255,255,.025);
+      opacity: 0; transform: translateY(14px);
+      transition: opacity .5s ease, transform .5s ease, border-color .2s;
+    }
+    .section-card.appear { opacity: 1; transform: translateY(0); }
+    .section-card:hover { border-color: rgba(230,198,138,.22); }
+    .section-header {
+      padding: 22px 24px; cursor: pointer;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+      transition: background .2s; user-select: none;
+    }
+    .section-header:hover { background: rgba(255,255,255,.02); }
+    .section-meta { flex: 1; }
+    .section-title   { font-size: 16px; font-weight: 600; margin: 0 0 6px; color: #f3e9d2; }
+    .section-summary { font-size: 13px; color: rgba(243,233,210,.5); line-height: 1.6; margin: 0; }
+    .toggle-btn {
+      flex-shrink: 0; width: 26px; height: 26px;
+      border: 1px solid rgba(230,198,138,.2); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #d8bf8b; font-size: 16px; line-height: 1;
+      transition: transform .25s, background .2s; margin-top: 2px;
+    }
+    .section-card.open .toggle-btn { transform: rotate(45deg); background: rgba(232,184,108,.1); }
+    .section-body {
+      max-height: 0; overflow: hidden;
+      transition: max-height .45s cubic-bezier(.4,0,.2,1), padding .3s ease;
+      padding: 0 24px;
+    }
+    .section-card.open .section-body { max-height: 900px; padding: 0 24px 26px; }
+    .section-divider { border: none; border-top: 1px solid rgba(230,198,138,.1); margin: 0 0 20px; }
+    .section-content { font-size: 15px; line-height: 2.1; color: rgba(243,233,210,.82); white-space: pre-line; }
+
+    /* ── 하단 ── */
+    .footer-wrap { max-width: 680px; margin: 36px auto 80px; padding: 0 20px; text-align: center; }
+    .share-box {
+      margin-bottom: 20px; padding: 24px 20px;
+      border: 1px solid rgba(230,198,138,.16); border-radius: 20px;
+      background: rgba(255,255,255,.025);
+    }
+    .share-label { font-size: 13px; color: rgba(243,233,210,.5); margin-bottom: 14px; letter-spacing: .05em; }
+    .share-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .btn-kakao {
+      display: flex; align-items: center; gap: 8px;
+      padding: 13px 22px; background: #FEE500; color: #1a1a1a;
+      border: none; border-radius: 12px;
+      font-family: inherit; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all .2s;
+    }
+    .btn-kakao:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(254,229,0,.35); }
+    .btn-kakao:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+    .btn-copy {
+      display: flex; align-items: center; gap: 8px;
+      padding: 13px 22px; background: rgba(255,255,255,.06);
+      border: 1px solid rgba(230,198,138,.22); border-radius: 12px;
+      color: rgba(243,233,210,.8);
+      font-family: inherit; font-size: 15px;
+      cursor: pointer; transition: all .2s;
+    }
+    .btn-copy:hover { border-color: rgba(232,184,108,.45); color: #f3e9d2; }
+    .copy-toast { display: none; margin-top: 10px; font-size: 13px; color: #d8bf8b; }
+    .new-link {
+      display: inline-block; padding: 13px 28px;
+      border: 1px solid rgba(230,198,138,.22); border-radius: 999px;
+      color: rgba(243,233,210,.65); text-decoration: none; font-size: 14px;
+      transition: all .2s; letter-spacing: .05em;
+    }
+    .new-link:hover { border-color: rgba(232,184,108,.45); color: #f3e9d2; }
+
+    /* ── 에러 ── */
+    #errorBox { display: none; max-width: 520px; margin: 80px auto; padding: 0 20px; text-align: center; }
+    .err-title { font-size: 22px; margin-bottom: 14px; }
+    .err-msg   { font-size: 15px; color: rgba(243,233,210,.55); line-height: 1.8; }
+    .err-link  {
+      display: inline-block; margin-top: 28px; padding: 13px 28px;
+      background: linear-gradient(180deg, #e8c78f 0%, #cda161 100%);
+      color: #1a110a; border-radius: 12px; text-decoration: none;
+      font-weight: 700; font-size: 15px;
+    }
+
+    @media (max-width: 520px) {
+      .pillars-wrap { grid-template-columns: repeat(2, 1fr); }
+      .intro-box { padding: 28px 22px 28px 34px; font-size: 15px; }
+      .section-header { padding: 18px; }
+      .section-body, .section-card.open .section-body { padding-left: 18px; padding-right: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="loading-msg">리딩을 불러오고 있어요...</div>
+  </div>
+
+  <div id="result">
+    <div class="page-header">
+      <div class="brand-small">명림당</div>
+      <h1 class="page-title" id="pageTitle">사주 리딩</h1>
+      <p class="page-sub" id="pageSub"></p>
+    </div>
+    <div class="pillars-section">
+      <div class="pillars-wrap" id="pillarsWrap"></div>
+    </div>
+    <div class="intro-section">
+      <div class="intro-box" id="introBox"></div>
+    </div>
+    <div class="sections-wrap" id="sectionsWrap"></div>
+    <div class="footer-wrap">
+      <div class="share-box">
+        <div class="share-label">이 리딩을 카카오톡으로 공유하기</div>
+        <div class="share-btns">
+          <button class="btn-kakao" id="btnKakao" onclick="shareKakao()">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2C5.58 2 2 4.91 2 8.5c0 2.3 1.47 4.32 3.7 5.47L4.9 17.1c-.07.27.22.49.46.34L8.9 15.1c.36.04.73.06 1.1.06 4.42 0 8-2.91 8-6.5S14.42 2 10 2z" fill="#1a1a1a"/>
+            </svg>
+            카카오톡으로 보내기
+          </button>
+          <button class="btn-copy" onclick="copyLink()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-7A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H4" stroke="currentColor" stroke-width="1.4"/>
+            </svg>
+            링크 복사
+          </button>
+        </div>
+        <div class="copy-toast" id="copyToast">링크가 복사됐어요 ✓</div>
+      </div>
+      <a href="/input" class="new-link">나도 사주 보기</a>
+    </div>
+  </div>
+
+  <div id="errorBox">
+    <div class="err-title">리딩을 찾을 수 없어요</div>
+    <p class="err-msg" id="errMsg">링크가 만료됐거나 잘못된 주소일 수 있어요.</p>
+    <a href="/input" class="err-link">내 사주 보러 가기</a>
+  </div>
+
+  <script>
+    const ELEM_MAP = { '木':'e-Wood','火':'e-Fire','土':'e-Earth','金':'e-Metal','水':'e-Water' };
+
+    function renderPillars(pillars, form) {
+      const wrap = document.getElementById('pillarsWrap');
+      [
+        { key: 'year',  label: '년주' },
+        { key: 'month', label: '월주' },
+        { key: 'day',   label: '일주', day: true },
+        { key: 'hour',  label: form.hourUnknown ? '시주*' : '시주' },
+      ].forEach(({ key, label, day }) => {
+        const p = pillars[key];
+        const card = document.createElement('div');
+        card.className = 'pillar-card' + (day ? ' pillar-day' : '');
+        card.innerHTML =
+          `<span class="pillar-label">${label}</span>` +
+          `<span class="pillar-stem">${p.stem}</span>` +
+          `<span class="pillar-branch">${p.branch}</span>` +
+          `<span class="pillar-elem ${ELEM_MAP[p.stemElem] || ''}">${p.stemElem}/${p.branchElem}</span>`;
+        wrap.appendChild(card);
+      });
+      document.getElementById('pageSub').textContent =
+        `${form.year}년 ${form.month}월 ${form.day}일` +
+        (form.hourUnknown ? '' : ` ${form.hour}시`) +
+        ` · ${form.gender === 'male' ? '남성' : '여성'}`;
+    }
+
+    function renderSections(sections) {
+      const wrap = document.getElementById('sectionsWrap');
+      sections.forEach((s, i) => {
+        const card = document.createElement('div');
+        card.className = 'section-card';
+        card.innerHTML =
+          `<div class="section-header" onclick="toggleCard(this.parentElement)">` +
+            `<div class="section-meta">` +
+              `<p class="section-title">${s.title}</p>` +
+              `<p class="section-summary">${s.summary}</p>` +
+            `</div>` +
+            `<div class="toggle-btn">+</div>` +
+          `</div>` +
+          `<div class="section-body">` +
+            `<hr class="section-divider"/>` +
+            `<div class="section-content">${s.content}</div>` +
+          `</div>`;
+        wrap.appendChild(card);
+        setTimeout(() => card.classList.add('appear'), 120 + i * 90);
+      });
+    }
+
+    function toggleCard(card) { card.classList.toggle('open'); }
+
+    function showResult() {
+      const loading = document.getElementById('loading');
+      loading.classList.add('fade-out');
+      setTimeout(() => { loading.style.display = 'none'; }, 650);
+      const result = document.getElementById('result');
+      result.classList.add('show');
+      requestAnimationFrame(() => requestAnimationFrame(() => result.classList.add('visible')));
+    }
+
+    // ── 공유 ──────────────────────────────────────────────────────────
+    const shareUrl = location.href;
+    let guestName  = '';
+
+    async function initKakao() {
+      try {
+        const cfg = await fetch('/api/config').then(r => r.json());
+        if (cfg.kakaoJsKey) {
+          const s = document.createElement('script');
+          s.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js';
+          s.onload = () => {
+            if (!window.Kakao.isInitialized()) Kakao.init(cfg.kakaoJsKey);
+          };
+          document.head.appendChild(s);
+        } else {
+          document.getElementById('btnKakao').disabled = true;
+          document.getElementById('btnKakao').title = '.env에 KAKAO_JS_KEY를 추가하면 활성화됩니다';
+        }
+      } catch {}
+    }
+
+    function shareKakao() {
+      if (!window.Kakao || !Kakao.isInitialized()) { copyLink(); return; }
+      Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: `${guestName}님의 사주 리딩 — 명림당`,
+          description: '나도 내 사주를 확인해볼까?',
+          link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+        },
+        buttons: [{
+          title: '리딩 보기',
+          link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+        }],
+      });
+    }
+
+    function copyLink() {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        const t = document.getElementById('copyToast');
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 2500);
+      });
+    }
+
+    // ── 데이터 로드 ───────────────────────────────────────────────────
+    async function loadReading() {
+      const id = location.pathname.split('/share/')[1];
+      if (!id) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('errorBox').style.display = 'block';
+        return;
+      }
+      try {
+        const res  = await fetch(`/api/reading/${id}`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const { form, pillars, reading } = data;
+
+        guestName = form.name;
+        document.getElementById('pageTitle').textContent = form.name + '님의 사주';
+        renderPillars(pillars, form);
+        document.getElementById('introBox').textContent = reading.intro;
+        renderSections(reading.sections);
+        showResult();
+        initKakao();
+      } catch {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('errorBox').style.display = 'block';
+      }
+    }
+
+    loadReading();
+  </script>
+</body>
+</html>
