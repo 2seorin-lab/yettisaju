@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>명림당 (明林堂)</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "Noto Serif KR", "Apple SD Gothic Neo", serif;
+      background: #0d0c12;
+      color: #f3e9d2;
+      min-height: 100%;
+    }
+
+    body {
+      position: relative;
+      background:
+        radial-gradient(circle at top, rgba(166, 124, 82, 0.12), transparent 28%),
+        radial-gradient(circle at bottom, rgba(217, 178, 111, 0.08), transparent 30%),
+        linear-gradient(180deg, #16131c 0%, #0c0a10 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: -2;
+      background-image:
+        radial-gradient(circle at 16% 12%, rgba(235, 205, 157, 0.16), transparent 14%),
+        radial-gradient(circle at 82% 18%, rgba(216, 178, 112, 0.12), transparent 18%),
+        radial-gradient(circle at 50% 72%, rgba(243, 233, 210, 0.06), transparent 22%),
+        linear-gradient(180deg, rgba(255, 248, 231, 0.05), transparent 35%, rgba(0, 0, 0, 0.04) 100%);
+      background-blend-mode: screen, screen, screen, normal;
+      filter: saturate(0.95);
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto 0 0;
+      height: 42%;
+      pointer-events: none;
+      z-index: -1;
+      background-image:
+        radial-gradient(circle at 22% 20%, rgba(38, 32, 26, 0.18), transparent 20%),
+        radial-gradient(circle at 70% 15%, rgba(45, 38, 31, 0.14), transparent 18%),
+        radial-gradient(circle at 40% 14%, rgba(255, 255, 255, 0.08), transparent 18%),
+        linear-gradient(180deg, rgba(12, 9, 13, 0.1), rgba(8, 7, 11, 0.6));
+      background-blend-mode: multiply, multiply, screen, normal;
+      opacity: 0.76;
+      transform: translateY(8%);
+      filter: blur(1px);
+    }
+
+    .scene {
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      opacity: 0.9;
+    }
+
+    .scene-svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .texture {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.08;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 3px 3px, 3px 3px;
+      mix-blend-mode: soft-light;
+    }
+
+    .container {
+      position: relative;
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 0;
+      position: relative;
+    }
+
+    .hero-inner {
+      width: 100%;
+      text-align: center;
+      padding: 56px 24px 40px;
+      border: 1px solid rgba(230, 198, 138, 0.18);
+      border-radius: 28px;
+      background: rgba(13, 12, 18, 0.62);
+      backdrop-filter: blur(6px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-inner::before {
+      content: "";
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(232, 184, 108, 0.22), transparent 70%);
+      filter: blur(8px);
+    }
+
+    .brand {
+      display: inline-block;
+      margin-bottom: 22px;
+      padding: 8px 14px;
+      border: 1px solid rgba(230, 198, 138, 0.24);
+      border-radius: 999px;
+      color: #d8bf8b;
+      font-size: 14px;
+      letter-spacing: 0.18em;
+    }
+
+    .headline {
+      font-size: clamp(40px, 7vw, 76px);
+      line-height: 1.15;
+      margin: 0;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+    }
+
+    .subcopy {
+      width: min(680px, 100%);
+      margin: 24px auto 0;
+      font-size: clamp(16px, 2.1vw, 22px);
+      line-height: 1.9;
+      color: rgba(243, 233, 210, 0.84);
+    }
+
+    .cta-wrap {
+      margin-top: 34px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .cta {
+      text-decoration: none;
+      color: #201910;
+      background: linear-gradient(180deg, #e8c78f 0%, #cda161 100%);
+      padding: 16px 28px;
+      border-radius: 999px;
+      font-size: 17px;
+      font-weight: 700;
+      box-shadow: 0 12px 30px rgba(205, 161, 97, 0.22);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 36px rgba(205, 161, 97, 0.28);
+    }
+
+    .trust-line {
+      margin-top: 20px;
+      font-size: 14px;
+      color: rgba(243, 233, 210, 0.6);
+    }
+
+    .scroll-section {
+      padding: 24px 0 96px;
+    }
+
+    .card {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      border-radius: 24px;
+      border: 1px solid rgba(230, 198, 138, 0.14);
+      background: rgba(255,255,255,0.03);
+      text-align: center;
+      color: rgba(243, 233, 210, 0.86);
+      line-height: 1.9;
+      font-size: 18px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #b79a6b;
+      margin-bottom: 12px;
+    }
+
+    .next-screen {
+      margin-top: 28px;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .choice {
+      padding: 18px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(230, 198, 138, 0.12);
+      color: #f3e9d2;
+      font-size: 16px;
+    }
+
+    .fog {
+      position: absolute;
+      inset: auto 0 8% 0;
+      height: 180px;
+      pointer-events: none;
+      background: radial-gradient(circle at center, rgba(255,255,255,0.08), transparent 60%);
+      filter: blur(36px);
+      opacity: 0.22;
+    }
+
+    @media (max-width: 640px) {
+      .hero-inner { padding: 44px 18px 34px; }
+      .subcopy { line-height: 1.8; }
+      .card { font-size: 16px; }
+      .choice { font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="scene">
+    <svg class="scene-svg" viewBox="0 0 1200 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <defs>
+        <linearGradient id="mistGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="rgba(255,255,255,0.18)" />
+          <stop offset="55%" stop-color="rgba(255,255,255,0.02)" />
+          <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+        </linearGradient>
+        <linearGradient id="pineGrad" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stop-color="rgba(34,28,22,0.95)" />
+          <stop offset="100%" stop-color="rgba(22,18,14,0.22)" />
+        </linearGradient>
+      </defs>
+      <path d="M0 520 C170 420 260 440 420 470 C560 490 700 430 840 470 C940 500 1040 460 1200 520 L1200 700 L0 700 Z" fill="rgba(20,18,15,0.86)" />
+      <path d="M0 580 C140 520 260 540 420 560 C560 570 720 520 860 560 C940 590 1040 560 1200 600 L1200 700 L0 700 Z" fill="rgba(25,22,18,0.58)" />
+      <rect x="0" y="0" width="1200" height="700" fill="url(#mistGrad)" />
+      <g opacity="0.85">
+        <path d="M150 600 L170 460 L190 600 Z" fill="url(#pineGrad)" />
+        <path d="M140 560 L160 430 L180 560 Z" fill="url(#pineGrad)" />
+        <path d="M200 610 L220 470 L240 610 Z" fill="url(#pineGrad)" />
+        <path d="M950 620 L980 500 L1005 620 Z" fill="url(#pineGrad)" />
+        <path d="M935 580 L965 460 L995 580 Z" fill="url(#pineGrad)" />
+      </g>
+    </svg>
+  </div>
+  <div class="texture"></div>
+  <div class="fog"></div>
+
+  <main class="hero">
+    <div class="container">
+      <section class="hero-inner">
+        <div class="brand">명림당</div>
+        <h1 class="headline">많이 답답하지…</h1>
+        <p class="subcopy">
+          괜히 혼자 끙끙 앓지 말고,<br />
+          잠시 앉아 네 이야기를 들려다오.<br />
+          사람마다 타고난 흐름이 있으니,<br />
+          내가 한번 찬찬히 짚어보마.
+        </p>
+
+        <div class="cta-wrap">
+          <a href="#worry" class="cta">내 이야기 좀 들어볼래</a>
+        </div>
+
+        <div class="trust-line">연애 · 취업 · 재물 · 마음 · 인간관계</div>
+      </section>
+    </div>
+  </main>
+
+  <section class="scroll-section" id="worry">
+    <div class="container">
+      <div class="card">
+        <div class="section-title">첫 물음</div>
+        <div style="font-size: 28px; margin-bottom: 14px;">그래… 어디가 그렇게 막막하냐</div>
+        <div>
+          무엇이 마음을 무겁게 하는지 먼저 골라보거라.<br />
+          그다음 태어난 날과 시간을 알려주면,<br />
+          네 사주의 흐름을 그 고민에 맞게 짚어주마.
+        </div>
+
+        <div class="next-screen">
+          <div class="choice">사람 때문에 힘드냐</div>
+          <div class="choice">앞날이 보이지 않느냐</div>
+          <div class="choice">돈 걱정이 크냐</div>
+          <div class="choice">마음이 자꾸 흔들리느냐</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
