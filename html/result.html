@@ -135,6 +135,39 @@
 
     /* ── 하단 버튼 ── */
     .footer-wrap { max-width: 680px; margin: 36px auto 80px; padding: 0 20px; text-align: center; }
+    .share-box {
+      margin-bottom: 20px;
+      padding: 24px 20px;
+      border: 1px solid rgba(230,198,138,.16);
+      border-radius: 20px;
+      background: rgba(255,255,255,.025);
+    }
+    .share-label { font-size: 13px; color: rgba(243,233,210,.5); margin-bottom: 14px; letter-spacing: .05em; }
+    .share-btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .btn-kakao {
+      display: flex; align-items: center; gap: 8px;
+      padding: 13px 22px;
+      background: #FEE500; color: #1a1a1a;
+      border: none; border-radius: 12px;
+      font-family: inherit; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: all .2s;
+    }
+    .btn-kakao:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(254,229,0,.35); }
+    .btn-kakao:disabled { opacity: .45; cursor: default; transform: none; box-shadow: none; }
+    .btn-copy {
+      display: flex; align-items: center; gap: 8px;
+      padding: 13px 22px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(230,198,138,.22); border-radius: 12px;
+      color: rgba(243,233,210,.8);
+      font-family: inherit; font-size: 15px;
+      cursor: pointer; transition: all .2s;
+    }
+    .btn-copy:hover { border-color: rgba(232,184,108,.45); color: #f3e9d2; }
+    .copy-toast {
+      display: none; margin-top: 10px;
+      font-size: 13px; color: #d8bf8b;
+    }
     .retry-link {
       display: inline-block; padding: 13px 28px;
       border: 1px solid rgba(230,198,138,.22); border-radius: 999px;
@@ -188,6 +221,25 @@
     </div>
     <div class="sections-wrap" id="sectionsWrap"></div>
     <div class="footer-wrap">
+      <div class="share-box" id="shareBox" style="display:none">
+        <div class="share-label">이 리딩을 카카오톡으로 공유하기</div>
+        <div class="share-btns">
+          <button class="btn-kakao" id="btnKakao" onclick="shareKakao()">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2C5.58 2 2 4.91 2 8.5c0 2.3 1.47 4.32 3.7 5.47L4.9 17.1c-.07.27.22.49.46.34L8.9 15.1c.36.04.73.06 1.1.06 4.42 0 8-2.91 8-6.5S14.42 2 10 2z" fill="#1a1a1a"/>
+            </svg>
+            카카오톡으로 보내기
+          </button>
+          <button class="btn-copy" onclick="copyLink()">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M11 5V3.5A1.5 1.5 0 009.5 2h-7A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H4" stroke="currentColor" stroke-width="1.4"/>
+            </svg>
+            링크 복사
+          </button>
+        </div>
+        <div class="copy-toast" id="copyToast">링크가 복사됐어요 ✓</div>
+      </div>
       <a href="/input" class="retry-link">다른 사주 보기</a>
     </div>
   </div>
@@ -298,6 +350,8 @@
       return t.trim();
     }
 
+    let sajuData = null;
+
     async function fetchReading(form) {
       let res;
       try {
@@ -332,20 +386,23 @@
           try { ev = JSON.parse(line.slice(6)); } catch { continue; }
 
           if (ev.type === 'saju') {
+            sajuData = ev.data;
             document.getElementById('pageTitle').textContent = form.name + '님의 사주';
             renderPillars(ev.data, form);
             document.getElementById('loadingMain').textContent = '운세를 풀어내고 있어요...';
           } else if (ev.type === 'text') {
             fullText += ev.text;
           } else if (ev.type === 'done') {
+            let readingData = null;
             try {
-              const data = JSON.parse(cleanJSON(fullText));
-              document.getElementById('introBox').textContent = data.intro;
-              renderSections(data.sections);
+              readingData = JSON.parse(cleanJSON(fullText));
+              document.getElementById('introBox').textContent = readingData.intro;
+              renderSections(readingData.sections);
             } catch {
               document.getElementById('introBox').textContent = fullText;
             }
             showResult();
+            if (readingData && sajuData) saveReading(form, sajuData, readingData);
           } else if (ev.type === 'error') {
             showError(ev.message);
           }
@@ -353,6 +410,72 @@
       }
     }
 
+    // ── 공유 관련 ───────────────────────────────────────────────────────
+    let shareUrl = '';
+
+    async function saveReading(form, pillars, reading) {
+      try {
+        const res = await fetch('/api/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ form, pillars, reading }),
+        });
+        const data = await res.json();
+        if (data.id) {
+          shareUrl = `${location.origin}/share/${data.id}`;
+          document.getElementById('shareBox').style.display = 'block';
+          initKakao();
+        }
+      } catch {}
+    }
+
+    async function initKakao() {
+      try {
+        const cfg = await fetch('/api/config').then(r => r.json());
+        if (cfg.kakaoJsKey) {
+          const s = document.createElement('script');
+          s.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js';
+          s.onload = () => {
+            if (!window.Kakao.isInitialized()) Kakao.init(cfg.kakaoJsKey);
+          };
+          document.head.appendChild(s);
+        } else {
+          document.getElementById('btnKakao').disabled = true;
+          document.getElementById('btnKakao').title = '.env에 KAKAO_JS_KEY를 추가하면 활성화됩니다';
+        }
+      } catch {}
+    }
+
+    function shareKakao() {
+      if (!window.Kakao || !Kakao.isInitialized()) {
+        copyLink();
+        return;
+      }
+      const name = JSON.parse(sessionStorage.getItem('sajuForm') || '{}').name || '';
+      Kakao.Share.sendDefault({
+        objectType: 'feed',
+        content: {
+          title: `${name}님의 사주 리딩 — 명림당`,
+          description: '나만의 사주를 확인해보세요.',
+          link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+        },
+        buttons: [{
+          title: '리딩 보기',
+          link: { mobileWebUrl: shareUrl, webUrl: shareUrl },
+        }],
+      });
+    }
+
+    function copyLink() {
+      if (!shareUrl) return;
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        const t = document.getElementById('copyToast');
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 2500);
+      });
+    }
+
+    // ── 기존 실행 ───────────────────────────────────────────────────────
     const raw = sessionStorage.getItem('sajuForm');
     if (!raw) {
       window.location.href = '/input';
