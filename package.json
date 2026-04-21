@@ -1,0 +1,14 @@
+{
+  "name": "yettisaju",
+  "version": "1.0.0",
+  "description": "명림당 사주 리딩 서비스",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2"
+  }
+}
