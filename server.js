@@ -3,6 +3,7 @@ const express = require('express');
 const path    = require('path');
 const crypto  = require('crypto');
 const fs      = require('fs');
+const { spawn } = require('child_process');
 
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
@@ -161,10 +162,10 @@ function calcSaju(year, month, day, hour) {
   const termDays = [6,4,6,5,6,6,7,7,8,8,7,7];
   const mOff = day >= termDays[month-1] ? (month-2+12)%12 : (month-3+12)%12;
   const mBi  = (mOff + 2) % 12;
-  const mSi  = ([2,4,6,8,0][Math.floor(ySi/2)%5] + mOff) % 10;
+  const mSi  = ([2,4,6,8,0][ySi%5] + mOff) % 10;
 
-  const days = Math.round((new Date(year,month-1,day) - new Date(2000,0,1)) / 86400000);
-  const dIdx = ((days + 16) % 60 + 60) % 60;
+  const days = Math.round((new Date(year,month-1,day) - new Date(2000,0,7)) / 86400000);
+  const dIdx = ((days % 60) + 60) % 60;
   const dSi  = dIdx % 10;
   const dBi  = dIdx % 12;
 
@@ -190,8 +191,6 @@ app.post('/api/saju', async (req, res) => {
 
   if (!name || !year || !month || !day)
     return res.status(400).json({ error: '필수 정보가 없습니다.' });
-  if (!process.env.GEMINI_API_KEY)
-    return res.status(500).json({ error: 'API 키가 설정되지 않았습니다. .env 파일을 확인해주세요.' });
 
   const h       = hourUnknown ? 12 : parseInt(hour);
   const pillars = calcSaju(parseInt(year), parseInt(month), parseInt(day), h);
@@ -252,35 +251,35 @@ ${analysisData}
 
   res.write(`data: ${JSON.stringify({ type: 'saju', data: pillars })}\n\n`);
 
-  try {
-    const apiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 2500, temperature: 0.85 },
-        }),
-      }
-    );
+  const claude = spawn('claude', ['-p'], {
+    env: { ...process.env, HOME: process.env.HOME },
+  });
 
-    if (!apiRes.ok) {
-      const errText = await apiRes.text();
-      throw new Error(`Gemini 오류 (${apiRes.status}): ${errText.slice(0,300)}`);
+  let fullText = '';
+  let errText  = '';
+
+  claude.stdin.write(prompt);
+  claude.stdin.end();
+
+  claude.stdout.on('data', (chunk) => { fullText += chunk.toString(); });
+  claude.stderr.on('data', (chunk) => { errText  += chunk.toString(); });
+
+  claude.on('error', (err) => {
+    console.error('Claude Code 실행 오류:', err.message);
+    res.write(`data: ${JSON.stringify({ type: 'error', message: 'claude 명령을 찾을 수 없습니다. Claude Code가 설치돼 있는지 확인해주세요.' })}\n\n`);
+    res.end();
+  });
+
+  claude.on('close', (code) => {
+    if (code === 0 && fullText) {
+      res.write(`data: ${JSON.stringify({ type: 'text', text: fullText })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+    } else {
+      console.error('Claude Code 오류 (exit', code, '):', errText.slice(0, 300));
+      res.write(`data: ${JSON.stringify({ type: 'error', message: errText.slice(0, 200) || 'Claude Code 실행에 실패했습니다.' })}\n\n`);
     }
-
-    const data = await apiRes.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    res.write(`data: ${JSON.stringify({ type: 'text', text })}\n\n`);
-    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
-  } catch (err) {
-    console.error('Gemini API 오류:', err.message);
-    res.write(`data: ${JSON.stringify({ type: 'error', message: err.message })}\n\n`);
-  }
-
-  res.end();
+    res.end();
+  });
 });
 
 // ── 리딩 저장 & 공유 ────────────────────────────────────────────────────────
